@@ -10,7 +10,6 @@ import numpy as np
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# Color to class mapping
 COLOR2CLASS = {
     (60, 16, 152): 0,      # Building: #3C1098
     (132, 41, 246): 1,     # Land: #8429F6
@@ -45,7 +44,6 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load(model_path, map_location=device))
     model = model.to(device)
 
-    # CLI: escolha da imagem
     if len(sys.argv) > 1:
         image_name = sys.argv[1]
         test_image_path = os.path.join(images_dir, image_name)
@@ -57,12 +55,10 @@ if __name__ == "__main__":
         print(f"Nenhum nome de imagem fornecido. Usando: {os.path.basename(test_image_path)}")
 
     pred_mask = predict_image(model, test_image_path, device)
-    # Salvar máscara predita como imagem
     try:
         import matplotlib.pyplot as plt
         import matplotlib.patches as mpatches
 
-        # Cores originais das classes
         CLASS_COLORS = [
             (60/255, 16/255, 152/255),      # Building
             (132/255, 41/255, 246/255),     # Land
@@ -73,7 +69,6 @@ if __name__ == "__main__":
         ]
         CLASS_NAMES = ['Building', 'Land', 'Road', 'Vegetation', 'Water', 'Unlabeled']
 
-        # Converter máscara para RGB
         rgb_mask = np.zeros((pred_mask.shape[0], pred_mask.shape[1], 3), dtype=np.float32)
         for idx, color in enumerate(CLASS_COLORS):
             rgb_mask[pred_mask == idx] = color
@@ -82,7 +77,6 @@ if __name__ == "__main__":
         ax.imshow(rgb_mask)
         ax.axis('off')
 
-        # Criar legenda
         patches = [mpatches.Patch(color=color, label=label) for color, label in zip(CLASS_COLORS, CLASS_NAMES)]
         plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
         plt.tight_layout()
