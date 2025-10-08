@@ -37,19 +37,56 @@ def predict_image(model, image_path, device):
     return pred_mask
 
 if __name__ == "__main__":
+    import sys
     images_dir = 'dataset/images'
     model_path = 'satellite_segmentation.pth'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = deeplabv3_resnet50(weights=None, num_classes=NUM_CLASSES)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model = model.to(device)
-    # Use a imagem de teste (troque o nome se quiser)
-    test_image_path = os.path.join(images_dir, os.listdir(images_dir)[0])
+
+    # CLI: escolha da imagem
+    if len(sys.argv) > 1:
+        image_name = sys.argv[1]
+        test_image_path = os.path.join(images_dir, image_name)
+        if not os.path.exists(test_image_path):
+            print(f"Arquivo '{image_name}' não encontrado em {images_dir}.")
+            sys.exit(1)
+    else:
+        test_image_path = os.path.join(images_dir, os.listdir(images_dir)[0])
+        print(f"Nenhum nome de imagem fornecido. Usando: {os.path.basename(test_image_path)}")
+
     pred_mask = predict_image(model, test_image_path, device)
     # Salvar máscara predita como imagem
     try:
-        from matplotlib import pyplot as plt
-        plt.imsave('predicted_mask.png', pred_mask, cmap='tab20')
-        print('Predição realizada e salva em predicted_mask.png')
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+
+        # Cores originais das classes
+        CLASS_COLORS = [
+            (60/255, 16/255, 152/255),      # Building
+            (132/255, 41/255, 246/255),     # Land
+            (110/255, 193/255, 228/255),    # Road
+            (254/255, 221/255, 58/255),     # Vegetation
+            (226/255, 169/255, 41/255),     # Water
+            (155/255, 155/255, 155/255)     # Unlabeled
+        ]
+        CLASS_NAMES = ['Building', 'Land', 'Road', 'Vegetation', 'Water', 'Unlabeled']
+
+        # Converter máscara para RGB
+        rgb_mask = np.zeros((pred_mask.shape[0], pred_mask.shape[1], 3), dtype=np.float32)
+        for idx, color in enumerate(CLASS_COLORS):
+            rgb_mask[pred_mask == idx] = color
+
+        fig, ax = plt.subplots(figsize=(8, 8))
+        ax.imshow(rgb_mask)
+        ax.axis('off')
+
+        # Criar legenda
+        patches = [mpatches.Patch(color=color, label=label) for color, label in zip(CLASS_COLORS, CLASS_NAMES)]
+        plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+        plt.tight_layout()
+        plt.savefig('predicted_mask.png', bbox_inches='tight')
+        print('Predição realizada e salva em predicted_mask.png com legenda.')
     except ImportError:
-        print('Predição realizada. Instale matplotlib para salvar a máscara como imagem.')
+        print('Predição realizada. Instale matplotlib para salvar a máscara como imagem com legenda.')
