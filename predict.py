@@ -37,7 +37,7 @@ def predict_image(model, image_path, device):
 
 if __name__ == "__main__":
     import sys
-    images_dir = 'dataset/images'
+    images_dir = 'dataset/testing'
     model_path = 'satellite_segmentation.pth'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = deeplabv3_resnet50(weights=None, num_classes=NUM_CLASSES)

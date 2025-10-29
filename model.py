@@ -57,7 +57,7 @@ transform = transforms.Compose([
 	transforms.ToTensor(),
 ])
 
-images_dir = 'dataset/images'
+images_dir = 'dataset/training'
 masks_dir = 'dataset/masks'
 train_dataset = SatelliteDataset(images_dir, masks_dir, transform=transform)
 train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
@@ -82,7 +82,7 @@ def train(model, loader, epochs=5):
 		print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
 if __name__ == "__main__":
-	train(model, train_loader, epochs=5)
+	train(model, train_loader, epochs=10)
 	torch.save(model.state_dict(), 'satellite_segmentation.pth')
 
 def predict_image(model, image_path):
