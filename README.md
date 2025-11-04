@@ -5,14 +5,16 @@ Este projeto treina um modelo de segmentação semântica (DeepLabV3-ResNet50) p
 ## Estrutura do projeto
 
 ```
+```
 AgentesInteligentes/
 ├── model.py              # Treinamento e função de predição básica
 ├── predict.py            # Script de predição com CLI e legenda
+├── api.py                # API REST para predição via upload de imagem
 ├── dataset/
-│   ├── training/           # Imagens para treino (.jpg)
-│   ├── testing/           # Imagens para realizar testes e predições (.jpg)
+│   ├── images/           # Imagens RGB (.jpg)
 │   └── masks/            # Máscaras anotadas (.png ou .jpg) com cores padronizadas
 └── README.md             # Este guia
+```
 ```
 
 ### Classes e cores para treino do modelo com máscaras (mapeamento RGB → classe)
@@ -27,15 +29,23 @@ As máscaras devem usar exatamente essas cores para que o conversor RGB→classe
 
 ## Requisitos
 
+- macOS com Python 3.9+ (recomendado)
+- GPU CUDA opcional (acelera o treino)
 - Pacotes Python:
   - torch, torchvision
   - Pillow, numpy
   - matplotlib (opcional, para salvar imagem com legenda no predict)
+  - Flask (para a API REST)
 
-Instalação dos pacotes:
+Instalação dos pacotes (exemplos):
 
 ```zsh
-pip install torch torchvision Pillow numpy matplotlib
+# Opcional: criar e ativar um ambiente virtual
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Instalar dependências
+pip install torch torchvision Pillow numpy matplotlib flask
 ```
 
 Observação: o código define um bypass SSL para evitar erros de certificado em ambientes locais. Em produção/remoto, remova-o.
@@ -100,6 +110,48 @@ Saídas:
 Como funciona:
 - O script carrega `satellite_segmentation.pth`, redimensiona a entrada para 256×256, roda a inferência e converte o mapa de classes (0–5) em cores RGB originais, adicionando uma legenda com nomes.
 
+## Usar a API REST
+
+A API REST (`api.py`) permite fazer predições via HTTP. Ideal para integração com outras aplicações ou front-ends.
+
+### Iniciar a API
+
+```zsh
+python3 api.py
+```
+
+A API roda em `http://localhost:3338` com os seguintes endpoints:
+
+- **POST /predict**: Recebe uma imagem via upload e retorna a máscara predita em formato PNG.
+- **GET /health**: Health check do serviço.
+
+### Fazer uma predição via API
+
+Usando `curl`:
+
+```zsh
+curl -X POST -F "image=@dataset/images/image0050.jpg" http://localhost:3338/predict --output predicted_mask_api.png
+```
+
+Usando Python (requests):
+
+```python
+import requests
+
+url = 'http://localhost:3338/predict'
+files = {'image': open('dataset/images/image0050.jpg', 'rb')}
+response = requests.post(url, files=files)
+
+if response.status_code == 200:
+    with open('predicted_mask_api.png', 'wb') as f:
+        f.write(response.content)
+    print('Máscara salva em predicted_mask_api.png')
+else:
+    print('Erro:', response.json())
+```
+
+A API retorna diretamente a imagem PNG com as cores das classes (sem legenda sobreposta, apenas a máscara RGB).
+
 ## Arquivos principais
 
 - `model.py`
@@ -109,6 +161,11 @@ Como funciona:
   - Função `predict_image` (inferência básica por arquivo).
 - `predict.py`
   - Carrega o checkpoint `satellite_segmentation.pth`.
-  - CLI para escolher a imagem dentro da pasta **testing**: `python3 predict.py <arquivo.jpg>`.
+  - CLI para escolher a imagem: `python3 predict.py <arquivo.jpg>`.
   - Gera `predicted_mask.png` com cores originais e legenda.
+- `api.py`
+  - API REST com Flask.
+  - Endpoint POST `/predict` para upload de imagem e retorno da máscara predita em PNG.
+  - Endpoint GET `/health` para verificar status do serviço.
+  - Carrega o modelo uma vez ao iniciar, mantendo-o em memória para inferências rápidas.
 
