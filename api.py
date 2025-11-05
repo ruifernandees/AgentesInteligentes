@@ -3,6 +3,7 @@
 # Endpoint: POST /predict (upload de imagem) → retorna máscara predita PNG
 
 from flask import Flask, request, send_file, jsonify
+from flask_cors import CORS
 import os
 import torch
 from torchvision import transforms
@@ -15,6 +16,7 @@ import gc
 ssl._create_default_https_context = ssl._create_unverified_context
 
 app = Flask(__name__)
+CORS(app)  # Habilita CORS para todas as rotas
 
 # Configuração do modelo
 NUM_CLASSES = 6
