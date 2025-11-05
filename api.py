@@ -11,6 +11,7 @@ from PIL import Image
 import numpy as np
 import io
 import ssl
+import gc
 ssl._create_default_https_context = ssl._create_unverified_context
 
 app = Flask(__name__)
@@ -20,11 +21,20 @@ NUM_CLASSES = 6
 MODEL_PATH = 'satellite_segmentation.pth'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Carrega o modelo uma vez ao iniciar a API
 model = deeplabv3_resnet50(weights=None, num_classes=NUM_CLASSES)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+
+state_dict = torch.load(MODEL_PATH, map_location='cpu')
+model.load_state_dict(state_dict)
+del state_dict
+gc.collect()
+
 model = model.to(device)
 model.eval()
+
+for param in model.parameters():
+    param.requires_grad = False
+
+gc.collect()
 
 # Transformações
 transform = transforms.Compose([
@@ -53,12 +63,20 @@ def predict_image(image_bytes):
     with torch.no_grad():
         output = model(input_tensor)['out']
         pred_mask = torch.argmax(output.squeeze(), dim=0).cpu().numpy()
+        
+        del output
+        if device.type == 'cuda':
+            torch.cuda.empty_cache()
+    
+    # Libera tensor de entrada
+    del input_tensor, image
     
     # Converte máscara de classes para RGB
     rgb_mask = np.zeros((pred_mask.shape[0], pred_mask.shape[1], 3), dtype=np.uint8)
     for idx, color in enumerate(CLASS_COLORS):
         rgb_mask[pred_mask == idx] = [int(c * 255) for c in color]
     
+    del pred_mask
     return rgb_mask
 
 @app.route('/predict', methods=['POST'])
@@ -85,12 +103,16 @@ def predict():
         # Converte o array numpy para imagem PIL e salva em buffer
         mask_image = Image.fromarray(rgb_mask, mode='RGB')
         buffer = io.BytesIO()
-        mask_image.save(buffer, format='PNG')
+        mask_image.save(buffer, format='PNG', optimize=True)
         buffer.seek(0)
+        
+        del rgb_mask, mask_image, image_bytes
+        gc.collect()
         
         return send_file(buffer, mimetype='image/png', as_attachment=False, download_name='predicted_mask.png')
     
     except Exception as e:
+        gc.collect()  # Libera memória mesmo em caso de erro
         return jsonify({'error': f'Erro ao processar imagem: {str(e)}'}), 500
 
 @app.route('/health', methods=['GET'])
