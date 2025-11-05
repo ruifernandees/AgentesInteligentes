@@ -45,10 +45,46 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Instalar dependências
-pip install torch torchvision Pillow numpy matplotlib flask
+pip install -r requirements.txt
 ```
 
 Observação: o código define um bypass SSL para evitar erros de certificado em ambientes locais. Em produção/remoto, remova-o.
+
+## Git LFS (Large File Storage)
+
+Este projeto utiliza Git LFS para versionar arquivos grandes como o modelo treinado (`.pth`), imagens do dataset e outros binários.
+
+### Instalar Git LFS
+
+```zsh
+# macOS (via Homebrew)
+brew install git-lfs
+
+# Inicializar Git LFS no repositório
+git lfs install
+```
+
+### Configurar rastreamento de arquivos
+
+O arquivo `.gitattributes` já está configurado para rastrear:
+- Modelos treinados: `*.pth`
+- Imagens: `*.jpg`, `*.png`
+- Outros arquivos grandes conforme necessário
+
+### Clonar o repositório
+
+Ao clonar o repositório, o Git LFS baixará automaticamente os arquivos grandes:
+
+```zsh
+git clone https://github.com/ruifernandees/AgentesInteligentes.git
+cd AgentesInteligentes
+```
+
+Se você já clonou o repositório antes de instalar o Git LFS, execute:
+
+```zsh
+git lfs pull
+```
 
 ## Como preparar os dados
 
