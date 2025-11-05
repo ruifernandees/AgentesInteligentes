@@ -110,4 +110,4 @@ if __name__ == '__main__':
     print("Endpoints disponíveis:")
     print("  POST /predict  - Upload de imagem para predição")
     print("  GET  /health   - Health check")
-    app.run(host='0.0.0.0', port=3338, debug=True)
+    app.run(host='0.0.0.0', port=10000, debug=True)
